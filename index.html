@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Leadsmax — Tạo Invoice</title>
+<style>
+  :root {
+    --orange: #ff6a1a;
+    --navy: #1f3a5f;
+    --bg: #f6f7f9;
+    --border: #d8dde3;
+    --text: #1a1a1a;
+    --muted: #6b7280;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  .container { max-width: 780px; margin: 30px auto; padding: 0 16px; }
+
+  header {
+    background: linear-gradient(135deg, #ff6a1a 0%, #ff8a3d 60%, #ffb84d 100%);
+    padding: 18px 24px;
+    border-radius: 12px;
+    color: var(--navy);
+    margin-bottom: 24px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  header .mark {
+    width: 36px; height: 36px; border-radius: 50%; background: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 22px; color: var(--orange);
+    font-family: Georgia, serif;
+  }
+  header h1 { margin: 0; font-size: 18px; }
+  header span { margin-left: auto; font-weight: 700; letter-spacing: 1px; }
+
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 22px 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    margin-bottom: 18px;
+  }
+  .card h2 {
+    margin: 0 0 14px 0; font-size: 14px; color: var(--navy);
+    text-transform: uppercase; letter-spacing: 0.6px;
+  }
+
+  label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: #374151; }
+  input, select, textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    background: #fff;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: none; border-color: var(--orange);
+    box-shadow: 0 0 0 3px rgba(255,106,26,0.15);
+  }
+
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+  .partner-info {
+    background: #f6f7f9; border-radius: 8px; padding: 12px;
+    font-size: 12px; color: var(--muted); margin-top: 10px;
+    display: none;
+  }
+  .partner-info.show { display: block; }
+  .partner-info strong { color: var(--text); }
+
+  /* line items */
+  .items-table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+  .items-table th {
+    text-align: left; font-size: 11px; font-weight: 600;
+    color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--border);
+  }
+  .items-table td { padding: 6px 4px; vertical-align: top; }
+  .items-table input { padding: 8px 10px; font-size: 13px; }
+  .btn-remove {
+    background: transparent; border: none; color: #c0392b; cursor: pointer;
+    font-size: 18px; padding: 0 6px;
+  }
+  .btn-add {
+    background: transparent; border: 1px dashed var(--border); color: var(--navy);
+    padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 13px;
+    margin-top: 8px;
+  }
+  .btn-add:hover { border-color: var(--orange); color: var(--orange); }
+
+  .totals {
+    margin-top: 14px; padding-top: 12px;
+    border-top: 1px solid var(--border);
+    display: flex; justify-content: flex-end; gap: 30px; font-size: 14px;
+  }
+  .totals strong { color: var(--orange); font-size: 16px; }
+
+  .submit-bar {
+    display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px;
+  }
+  .btn-primary {
+    background: var(--orange); color: #fff; border: none;
+    padding: 12px 28px; border-radius: 8px; font-size: 14px; font-weight: 700;
+    cursor: pointer; letter-spacing: 0.4px;
+  }
+  .btn-primary:hover { background: #e85a0c; }
+  .btn-primary:disabled { background: #c5c8cc; cursor: not-allowed; }
+
+  .result {
+    margin-top: 20px; padding: 18px 20px; border-radius: 10px;
+    background: #e8f5e9; color: #1b5e20; display: none;
+  }
+  .result.show { display: block; }
+  .result.error { background: #fdecea; color: #b71c1c; }
+  .result a { color: inherit; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <header>
+    <div class="mark">m</div>
+    <h1>Leadsmax — Tạo Invoice</h1>
+    <span>INVOICE</span>
+  </header>
+
+  <form id="invoiceForm">
+
+    <!-- 1. Partner -->
+    <div class="card">
+      <h2>1. Partner</h2>
+      <label for="partner_id">Chọn partner</label>
+      <select id="partner_id" name="partner_id" required>
+        <option value="">— Đang tải danh sách... —</option>
+      </select>
+      <div id="partnerInfo" class="partner-info"></div>
+    </div>
+
+    <!-- 2. Invoice info -->
+    <div class="card">
+      <h2>2. Thông tin invoice</h2>
+      <div class="row">
+        <div>
+          <label for="invoice_date">Invoice Date</label>
+          <input type="date" id="invoice_date" name="invoice_date" required />
+        </div>
+        <div>
+          <label for="payment_method">Payment Method</label>
+          <input type="text" id="payment_method" name="payment_method" value="ACH" required />
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Line items -->
+    <div class="card">
+      <h2>3. Chi tiết</h2>
+      <table class="items-table">
+        <thead>
+          <tr>
+            <th style="width:30%">Period</th>
+            <th style="width:18%">Conversions</th>
+            <th style="width:22%">Revenue (USD)</th>
+            <th style="width:25%">Notes</th>
+            <th style="width:5%"></th>
+          </tr>
+        </thead>
+        <tbody id="itemsBody">
+          <!-- rows injected by JS -->
+        </tbody>
+      </table>
+      <button type="button" class="btn-add" id="btnAdd">+ Thêm dòng</button>
+
+      <div class="totals">
+        <div>Tổng Conversions: <strong id="sumConv">0</strong></div>
+        <div>Tổng Revenue: <strong id="sumRev">$0.00</strong></div>
+      </div>
+    </div>
+
+    <!-- 4. Submit -->
+    <div class="submit-bar">
+      <button type="submit" class="btn-primary" id="btnSubmit">Tạo Invoice</button>
+    </div>
+
+  </form>
+
+  <div id="result" class="result"></div>
+
+</div>
+
+<script>
+  // ====== CẤU HÌNH ======
+  // Đổi 2 URL này sau khi deploy n8n
+  const API_GET_PARTNERS  = 'https://your-n8n-host.com/webhook/leadsmax/partners';
+  const API_CREATE_INVOICE = 'https://your-n8n-host.com/webhook/leadsmax/create-invoice';
+
+  // ====== STATE ======
+  let partners = [];
+  let rowSeq = 0;
+
+  // ====== LOAD PARTNERS ======
+  async function loadPartners() {
+    try {
+      const res = await fetch(API_GET_PARTNERS);
+      partners = await res.json();
+      const sel = document.getElementById('partner_id');
+      sel.innerHTML = '<option value="">— Chọn partner —</option>';
+      partners.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.partner_id;
+        opt.textContent = `${p.partner_id} — ${p.company_name}`;
+        sel.appendChild(opt);
+      });
+    } catch (err) {
+      document.getElementById('partner_id').innerHTML =
+        '<option value="">⚠️ Lỗi tải partners — kiểm tra API</option>';
+    }
+  }
+
+  document.getElementById('partner_id').addEventListener('change', e => {
+    const p = partners.find(x => x.partner_id === e.target.value);
+    const info = document.getElementById('partnerInfo');
+    if (!p) { info.classList.remove('show'); return; }
+    info.classList.add('show');
+    info.innerHTML = `
+      <strong>${p.company_name}</strong><br />
+      ${p.address || '—'}<br />
+      Phone: ${p.phone || '—'} · VAT: ${p.tax_number || '—'} · Reg: ${p.registration_code || '—'}<br />
+      Email: ${p.default_emails || '—'}
+    `;
+  });
+
+  // ====== LINE ITEMS ======
+  function addRow(prefill = {}) {
+    rowSeq++;
+    const tr = document.createElement('tr');
+    tr.dataset.id = rowSeq;
+    tr.innerHTML = `
+      <td><input type="text" class="i-period" placeholder="March 2026" value="${prefill.period||''}" required /></td>
+      <td><input type="number" class="i-conv" min="0" step="1" value="${prefill.conversions||''}" /></td>
+      <td><input type="number" class="i-rev" min="0" step="0.01" value="${prefill.revenue||''}" required /></td>
+      <td><input type="text" class="i-notes" value="${prefill.notes||''}" /></td>
+      <td><button type="button" class="btn-remove" title="Xóa dòng">×</button></td>
+    `;
+    tr.querySelector('.btn-remove').onclick = () => { tr.remove(); recalc(); };
+    tr.querySelectorAll('input').forEach(i => i.addEventListener('input', recalc));
+    document.getElementById('itemsBody').appendChild(tr);
+    recalc();
+  }
+
+  function recalc() {
+    let conv = 0, rev = 0;
+    document.querySelectorAll('#itemsBody tr').forEach(tr => {
+      conv += parseInt(tr.querySelector('.i-conv').value) || 0;
+      rev  += parseFloat(tr.querySelector('.i-rev').value) || 0;
+    });
+    document.getElementById('sumConv').textContent = conv.toLocaleString('en-US');
+    document.getElementById('sumRev').textContent =
+      '$' + rev.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+
+  document.getElementById('btnAdd').onclick = () => addRow();
+  addRow(); // dòng mặc định
+
+  // ngày mặc định = hôm nay
+  document.getElementById('invoice_date').valueAsDate = new Date();
+
+  // ====== SUBMIT ======
+  document.getElementById('invoiceForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = document.getElementById('btnSubmit');
+    const result = document.getElementById('result');
+    result.className = 'result';
+    btn.disabled = true; btn.textContent = 'Đang xử lý...';
+
+    const line_items = Array.from(document.querySelectorAll('#itemsBody tr')).map(tr => ({
+      period: tr.querySelector('.i-period').value.trim(),
+      conversions: parseInt(tr.querySelector('.i-conv').value) || 0,
+      revenue_usd: parseFloat(tr.querySelector('.i-rev').value) || 0,
+      notes: tr.querySelector('.i-notes').value.trim()
+    }));
+
+    const payload = {
+      partner_id: document.getElementById('partner_id').value,
+      invoice_date: document.getElementById('invoice_date').value,
+      payment_method: document.getElementById('payment_method').value.trim(),
+      line_items
+    };
+
+    try {
+      const res = await fetch(API_CREATE_INVOICE, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      result.classList.add('show');
+      result.innerHTML = `
+        ✅ Tạo invoice thành công: <strong>${data.invoice_no}</strong><br />
+        <a href="${data.pdf_url}" target="_blank">📄 Mở PDF</a>
+      `;
+      // reset form (giữ partner để tạo tiếp invoice khác cho cùng partner thì comment dòng dưới)
+      document.getElementById('itemsBody').innerHTML = '';
+      addRow();
+    } catch (err) {
+      result.classList.add('show', 'error');
+      result.textContent = '❌ Lỗi: ' + err.message;
+    } finally {
+      btn.disabled = false; btn.textContent = 'Tạo Invoice';
+    }
+  });
+
+  // ====== INIT ======
+  loadPartners();
+</script>
+
+</body>
+</html>
